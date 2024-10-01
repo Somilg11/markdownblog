@@ -15,22 +15,19 @@ import OnThisPage from "@/components/onthispage";
 
 const postsDirectory = path.join(process.cwd(), "content");
 
-export async function getStaticPaths() {
-  // Get all markdown files
+// Generate static params for dynamic routing
+export async function generateStaticParams() {
+  // Read markdown files from the directory
   const filenames = fs.readdirSync(postsDirectory);
 
-  // Generate paths based on markdown filenames
-  const paths = filenames.map((filename) => ({
-    params: { slug: filename.replace(".md", "") },
+  // Generate params for each markdown file
+  return filenames.map((filename) => ({
+    slug: filename.replace(".md", ""),
   }));
-
-  return {
-    paths,
-    fallback: false, // Return 404 for missing pages
-  };
 }
 
-export async function getStaticProps({ params }) {
+// Main component to render the markdown content
+export default async function Page({ params }) {
   const filepath = path.join(postsDirectory, `${params.slug}.md`);
 
   if (!fs.existsSync(filepath)) {
@@ -42,7 +39,7 @@ export async function getStaticProps({ params }) {
   const fileContent = fs.readFileSync(filepath, "utf-8");
   const { content, data } = matter(fileContent);
 
-  // Use remark and rehype to process markdown
+  // Process markdown using remark and rehype
   const processor = unified()
     .use(remarkParse)
     .use(remarkRehype)
@@ -63,24 +60,15 @@ export async function getStaticProps({ params }) {
 
   const htmlContent = (await processor.process(content)).toString();
 
-  return {
-    props: {
-      frontMatter: data,
-      htmlContent,
-    },
-  };
-}
-
-export default function Page({ frontMatter, htmlContent }) {
   return (
     <div className="max-w-6xl mx-auto p-4">
-      <h1 className="text-4xl font-bold mb-4">{frontMatter.title}</h1>
+      <h1 className="text-4xl font-bold mb-4">{data.title}</h1>
       <p className="text-base mb-2 border-l-4 border-gray-500 pl-4 italic">
-        &quot;{frontMatter.description}&quot;
+        &quot;{data.description}&quot;
       </p>
       <div className="flex gap-2">
-        <p className="text-sm text-gray-500 mb-4 italic">By {frontMatter.author}</p>
-        <p className="text-sm text-gray-500 mb-4">{frontMatter.date}</p>
+        <p className="text-sm text-gray-500 mb-4 italic">By {data.author}</p>
+        <p className="text-sm text-gray-500 mb-4">{data.date}</p>
       </div>
       <div
         dangerouslySetInnerHTML={{ __html: htmlContent }}
